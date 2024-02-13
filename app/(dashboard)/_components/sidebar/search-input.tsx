@@ -25,7 +25,7 @@ const SearchInput = () => {
     const url = qs.stringifyUrl({
       url: '/',
       query: {
-        searh: debouncedValue
+        search: debouncedValue
       }
     }, {
       skipEmptyString: true,

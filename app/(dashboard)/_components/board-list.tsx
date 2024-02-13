@@ -12,7 +12,7 @@ import NewBoardButton from "./new-board-button";
 interface BoardListProps {
   orgId: string;
   query: {
-    searh?: string;
+    search?: string;
     favorites?: string;
   };
 }
@@ -22,7 +22,10 @@ const BoardList = ({
   query,
 }: BoardListProps) => {
 
-  const data = useQuery(api.boards.get, { orgId });
+  const data = useQuery(api.boards.get, {
+    orgId,
+    ...query,
+  });
 
   if (data === undefined) {
     return (
@@ -41,7 +44,7 @@ const BoardList = ({
     );
   }
 
-  if (!data?.length && query.searh) {
+  if (!data?.length && query.search) {
     return (
       <EmptySearch />
     )
