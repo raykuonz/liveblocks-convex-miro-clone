@@ -1,7 +1,7 @@
 "use client";
 
 import { ClientSideSuspense } from "@liveblocks/react";
-import { Children, ReactNode } from "react";
+import { ReactNode } from "react";
 
 import { RoomProvider } from "@/liveblocks.config";
 
@@ -21,7 +21,9 @@ const Room = ({
   return (
     <RoomProvider
       id={roomId}
-      initialPresence={{}}
+      initialPresence={{
+        cursor: null,
+      }}
     >
       <ClientSideSuspense fallback={fallback}>
         {() => children}
