@@ -30,6 +30,7 @@ import {
   LayerType,
   Point
 } from "@/types/canvas";
+import { SelectionBox } from "./selection-box";
 
 const MAX_LAYERS = 100;
 
@@ -200,6 +201,9 @@ const Canvas = ({
               selectionColor={layerIdsToColorSelection[layerId]}
             />
           ))}
+          <SelectionBox
+            onResizeHandlePointerDown={() => {}}
+          />
           <CursorsPresence />
         </g>
       </svg>
