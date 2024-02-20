@@ -7,6 +7,10 @@ import { useSelectionBounces } from "@/hooks/use-selection-bounds";
 import { ColorPicker } from "./color-picker";
 
 import { Camera, Color } from "@/types/canvas";
+import { useDeleteLayers } from "@/hooks/use-delete-layers";
+import { Hint } from "@/components/hint";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface SelectionToolsProps {
   camera: Camera,
@@ -19,6 +23,8 @@ export const SelectionTools = memo(({
 }: SelectionToolsProps) => {
 
   const selection = useSelf((me) => me.presence.selection);
+
+  const deleteLayers = useDeleteLayers();
 
   const selectionBounds = useSelectionBounces();
 
@@ -55,6 +61,19 @@ export const SelectionTools = memo(({
       <ColorPicker
         onChange={setFill}
       />
+      <div
+        className="flex items-center pl-2 ml-2 border-l border-neutral-200"
+      >
+        <Hint label="Delete">
+          <Button
+            variant="board"
+            size="icon"
+            onClick={deleteLayers}
+          >
+            <Trash2 />
+          </Button>
+        </Hint>
+      </div>
     </div>
   )
 })
