@@ -13,7 +13,9 @@ import {
   useStorage,
 } from "@/liveblocks.config";
 import {
-  connectionIdToColor, pointerEventToCanvasPoint,
+  connectionIdToColor,
+  pointerEventToCanvasPoint,
+  resizeBounds,
 } from "@/lib/utils";
 
 import { Info } from "./info"
@@ -28,7 +30,9 @@ import {
   CanvasState,
   Color,
   LayerType,
-  Point
+  Point,
+  Side,
+  XYWH
 } from "@/types/canvas";
 import { SelectionBox } from "./selection-box";
 
@@ -89,6 +93,83 @@ const Canvas = ({
 
   }, [lastUsedColor]);
 
+  const unselectLayers = useMutation((
+    { self, setMyPresence }
+  ) => {
+    if (self.presence.selection.length > 0 ) {
+      setMyPresence({ selection: [] }, { addToHistory: true });
+    }
+  }, []);
+
+  const translateSelectedLayers = useMutation((
+    { storage, self },
+    point: Point,
+  ) => {
+    if (canvasState.mode !== CanvasMode.Translating) {
+      return;
+    }
+
+    const offset = {
+      x: point.x - canvasState.current.x,
+      y: point.y - canvasState.current.y,
+    }
+
+    const liveLayers = storage.get('layers');
+    for (const id of self.presence.selection) {
+      const layer = liveLayers.get(id);
+
+      if (layer) {
+        layer.update({
+          x: layer.get('x') + offset.x,
+          y: layer.get('y') + offset.y,
+        });
+      }
+    }
+
+    setCanvasState({ mode: CanvasMode.Translating, current: point });
+
+  }, [canvasState]);
+
+  const resizeSelectedLayer = useMutation((
+    { storage, self },
+    point: Point,
+  ) => {
+    if (canvasState.mode !== CanvasMode.Resizing) {
+      return;
+    }
+
+    const bounds = resizeBounds(
+      canvasState.initialBounds,
+      canvasState.corner,
+      point,
+    );
+
+    const liveLayers = storage.get('layers');
+    const layer = liveLayers.get(self.presence.selection[0]);
+
+    if (layer) {
+      layer.update(bounds);
+    }
+  }, [canvasState]);
+
+  const handleResizeHandlePointerDown = useCallback((
+    corner: Side,
+    initialBounds: XYWH,
+  ) => {
+
+    console.log({
+      corner,
+      initialBounds,
+    });
+
+    history.pause();
+    setCanvasState({
+      mode: CanvasMode.Resizing,
+      initialBounds,
+      corner,
+    })
+  }, [])
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     setCamera((camera) => ({
       x: camera.x - e.deltaX,
@@ -103,16 +184,46 @@ const Canvas = ({
 
     setMyPresence({ cursor: current });
 
-  }, []);
+    if (canvasState.mode === CanvasMode.Translating) {
+      translateSelectedLayers(current);
+    } else if (canvasState.mode === CanvasMode.Resizing) {
+      resizeSelectedLayer(current);
+    }
+
+  }, [canvasState, resizeSelectedLayer, camera]);
 
   const handlePointerLeave = useMutation(({ setMyPresence }) => {
     setMyPresence({ cursor: null });
   }, []);
 
+  const handlePointerDown = useCallback((
+    e: React.PointerEvent,
+  ) => {
+    const point = pointerEventToCanvasPoint(e, camera);
+
+    if (canvasState.modew === CanvasMode.Inserting) {
+      return;
+    }
+
+    // TODO: Add case for drawing
+
+    setCanvasState({ origin: point, mode: CanvasMode.Pressing });
+  }, [camera, canvasState.mode, setCanvasState]);
+
   const handlePointerUp = useMutation(({}, e) => {
     const point = pointerEventToCanvasPoint(e, camera);
 
-    if (canvasState.mode === CanvasMode.Inserting) {
+    if (
+      canvasState.mode === CanvasMode.None
+      || canvasState.mode === CanvasMode.Pressing
+    ) {
+
+      unselectLayers();
+
+      setCanvasState({
+        mode: CanvasMode.None,
+      })
+    } else if (canvasState.mode === CanvasMode.Inserting) {
       insertLayer(canvasState.layerType, point);
     } else {
       setCanvasState({
@@ -123,7 +234,7 @@ const Canvas = ({
     history.resume();
   }, [camera, canvasState, history, insertLayer]);
 
-  const handlePointerDown = useMutation((
+  const handleLayerPointerDown = useMutation((
     { self, setMyPresence },
     e: React.PointerEvent,
     layerId,
@@ -187,6 +298,7 @@ const Canvas = ({
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerUp={handlePointerUp}
+        onPointerDown={handlePointerDown}
       >
         <g
           style={{
@@ -197,12 +309,12 @@ const Canvas = ({
             <LayerPreview
               key={layerId}
               id={layerId}
-              onLayerPointerDown={handlePointerDown}
+              onLayerPointerDown={handleLayerPointerDown}
               selectionColor={layerIdsToColorSelection[layerId]}
             />
           ))}
           <SelectionBox
-            onResizeHandlePointerDown={() => {}}
+            onResizeHandlePointerDown={handleResizeHandlePointerDown}
           />
           <CursorsPresence />
         </g>
