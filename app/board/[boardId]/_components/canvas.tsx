@@ -1,6 +1,11 @@
 "use client"
 
-import React, { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import { nanoid } from "nanoid";
 import { LiveObject } from "@liveblocks/client";
 
@@ -21,6 +26,9 @@ import {
   pointerEventToCanvasPoint,
   resizeBounds,
 } from "@/lib/utils";
+
+import { useDisableScrollBounce } from "@/hooks/use-disable-scroll-bounce";
+import { useDeleteLayers } from "@/hooks/use-delete-layers";
 
 import { Info } from "./info"
 import { Participants } from "./participants"
@@ -66,6 +74,8 @@ const Canvas = ({
     g: 0,
     b: 0,
   });
+
+  useDisableScrollBounce();
 
   const history = useHistory();
   const canUndo = useCanUndo();
@@ -276,14 +286,14 @@ const Canvas = ({
       initialBounds,
       corner,
     })
-  }, [])
+  }, [history])
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     setCamera((camera) => ({
       x: camera.x - e.deltaX,
       y: camera.y - e.deltaY,
     }))
-  }, []);
+  }, [setCamera]);
 
   const handlePointerMove = useMutation(({ setMyPresence }, e: React.PointerEvent ) => {
     e.preventDefault();
@@ -419,6 +429,40 @@ const Canvas = ({
     return layerIdsToColorSelection;
   }, [selections, selfSelection]);
 
+  const deleteLayers = useDeleteLayers();
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      switch (e.key) {
+        case 'z':
+          if (e.ctrlKey || e.metaKey) {
+            history.undo();
+          }
+          break;
+
+        case 'y':
+          if (e.ctrlKey || e.metaKey) {
+            history.redo();
+          }
+          break;
+
+        // TODO: check if user is typing in sticky notes
+        // case 'Backspace':
+        //   deleteLayers();
+        //   break;
+
+        default:
+          break;
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  }, [deleteLayers, history]);
+
   return (
     <main
       className="h-full w-full relative bg-neutral-100 touch-none"
@@ -449,7 +493,7 @@ const Canvas = ({
       >
         <g
           style={{
-            transform: `translate(${camera.x}px ${camera.y}px)`
+            transform: `translate(${camera.x}px, ${camera.y}px)`
           }}
         >
           {layerIds.map((layerId) => (
