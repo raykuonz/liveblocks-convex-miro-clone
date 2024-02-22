@@ -1,11 +1,13 @@
 "use client";
 
-import { api } from "@/convex/_generated/api";
-import { useApiMutation } from "@/hooks/use-api-mutation";
-import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { api } from "@/convex/_generated/api";
+import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useProModal } from "@/store/use-pro-modal";
 
 interface NewBoardButtonProps {
   orgId: string;
@@ -18,6 +20,7 @@ const NewBoardButton = ({
 }: NewBoardButtonProps) => {
 
   const router = useRouter();
+  const proModal = useProModal();
 
   const { mutate, pending } = useApiMutation(api.board.create);
 
@@ -31,7 +34,8 @@ const NewBoardButton = ({
         router.push(`/board/${id}`)
       })
       .catch(() => {
-        toast.error('Failed to created board.')
+        toast.error('Failed to created board.');
+        proModal.onOpen();
       })
   }
 
