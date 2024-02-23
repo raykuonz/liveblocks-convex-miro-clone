@@ -1,8 +1,12 @@
 "use client";
 
-import { Poppins } from "next/font/google";
+import { useState } from "react";
 import Image from "next/image";
+import { useAction } from "convex/react";
+import { useOrganization } from "@clerk/nextjs";
+import { Poppins } from "next/font/google";
 
+import { api } from "@/convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +23,28 @@ const font = Poppins({
 export const ProModal = () => {
 
   const { isOpen, onClose } = useProModal();
+
+  const pay = useAction(api.stripe.pay);
+
+  const [pending, setPending] = useState(false);
+
+  const { organization } = useOrganization();
+
+  const handleClick = async () => {
+    if (!organization?.id) return;
+
+    setPending(true);
+
+    try {
+      const redirectUrl = await pay({
+        orgId: organization.id,
+      });
+
+      window.location.href = redirectUrl;
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -51,6 +77,8 @@ export const ProModal = () => {
             </ul>
           </div>
           <Button
+            onClick={handleClick}
+            disabled={pending}
             size="sm"
             className="w-full"
           >
